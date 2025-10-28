@@ -1,0 +1,1907 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centro de Monitoreo Roatán - Sistema de Práctica 911</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --primary-color: #1a365d;
+            --secondary-color: #2d3748;
+            --accent-color: #3182ce;
+            --success-color: #38a169;
+            --warning-color: #d69e2e;
+            --error-color: #e53e3e;
+            --light-color: #f7fafc;
+            --dark-color: #2d3748;
+            --panel-bg: #ffffff;
+            --sidebar-bg: #2d3748;
+            --header-bg: #1a202c;
+            --border-color: #e2e8f0;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #edf2f7 0%, #e2e8f0 100%);
+            color: var(--dark-color);
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .app-container {
+            display: grid;
+            grid-template-areas: 
+                "header header"
+                "sidebar main";
+            grid-template-columns: 280px 1fr;
+            grid-template-rows: 70px 1fr;
+            min-height: 100vh;
+        }
+        
+        /* Header Styles */
+        header {
+            grid-area: header;
+            background: var(--header-bg);
+            color: white;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-bottom: 3px solid var(--accent-color);
+            z-index: 100;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo-icon {
+            font-size: 2rem;
+            color: var(--accent-color);
+        }
+        
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .logo-main {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+        
+        .logo-sub {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-top: 2px;
+        }
+        
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255,255,255,0.1);
+            padding: 8px 15px;
+            border-radius: 8px;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-color), #63b3ed);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        /* Sidebar Styles */
+        .sidebar {
+            grid-area: sidebar;
+            background: var(--sidebar-bg);
+            color: white;
+            padding: 20px 0;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            z-index: 90;
+        }
+        
+        .nav-section {
+            margin-bottom: 25px;
+        }
+        
+        .nav-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 0 20px 10px;
+            color: #a0aec0;
+            border-bottom: 1px solid #4a5568;
+        }
+        
+        .nav-item {
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+        
+        .nav-item:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .nav-item.active {
+            background: rgba(255,255,255,0.1);
+            border-left-color: var(--accent-color);
+        }
+        
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+            color: #cbd5e0;
+        }
+        
+        .nav-item.active i {
+            color: var(--accent-color);
+        }
+        
+        /* Main Content Styles */
+        .main-content {
+            grid-area: main;
+            padding: 25px;
+            overflow-y: auto;
+        }
+        
+        .content-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        
+        .page-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .page-title i {
+            color: var(--accent-color);
+        }
+        
+        /* Panel Styles */
+        .panel-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+        
+        @media (max-width: 1200px) {
+            .panel-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .panel {
+            background: var(--panel-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .panel:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+        
+        .panel-header {
+            padding: 20px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: between;
+        }
+        
+        .panel-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .panel-body {
+            padding: 20px;
+        }
+        
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s;
+            background: var(--light-color);
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        /* Button Styles */
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+        }
+        
+        .btn-primary {
+            background: var(--accent-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2c5aa0;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(49, 130, 206, 0.3);
+        }
+        
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #2f855a;
+            transform: translateY(-2px);
+        }
+        
+        .btn-warning {
+            background: var(--warning-color);
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background: #b7791f;
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+            background: var(--error-color);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c53030;
+            transform: translateY(-2px);
+        }
+        
+        /* Map Styles */
+        #map {
+            height: 400px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        /* Stats Styles */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: var(--light-color);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            border-left: 4px solid var(--accent-color);
+        }
+        
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--accent-color);
+            line-height: 1;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #718096;
+            margin-top: 5px;
+        }
+        
+        /* Emergency Panel */
+        .emergency-panel {
+            border-top: 4px solid var(--error-color);
+        }
+        
+        .emergency-header {
+            background: linear-gradient(135deg, #c53030, #e53e3e);
+        }
+        
+        .caller-info {
+            background: rgba(229, 62, 62, 0.05);
+            border: 1px solid rgba(229, 62, 62, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .caller-info h3 {
+            color: var(--error-color);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* Timer Styles */
+        .timer-container {
+            background: var(--light-color);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .timer-warning {
+            background: rgba(214, 158, 46, 0.1);
+            color: var(--warning-color);
+            border-color: rgba(214, 158, 46, 0.3);
+        }
+        
+        .timer-critical {
+            background: rgba(229, 62, 62, 0.1);
+            color: var(--error-color);
+            border-color: rgba(229, 62, 62, 0.3);
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        /* Feedback Styles */
+        .feedback {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-weight: 500;
+            display: none;
+        }
+        
+        .feedback.success {
+            background: rgba(56, 161, 105, 0.1);
+            border: 1px solid var(--success-color);
+            color: var(--success-color);
+            display: block;
+        }
+        
+        .feedback.error {
+            background: rgba(229, 62, 62, 0.1);
+            border: 1px solid var(--error-color);
+            color: var(--error-color);
+            display: block;
+        }
+        
+        /* Table Styles */
+        .table-container {
+            overflow-x: auto;
+            margin-top: 15px;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        
+        .data-table th {
+            background: var(--light-color);
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .data-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .data-table tr:hover {
+            background: rgba(49, 130, 206, 0.03);
+        }
+        
+        /* Progress Bar */
+        .progress-bar {
+            height: 8px;
+            background: var(--light-color);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-color), #63b3ed);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        /* Action Bar */
+        .action-bar {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        /* Map Controls */
+        .map-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .map-controls .btn {
+            padding: 8px 12px;
+            font-size: 0.9rem;
+        }
+        
+        /* Status Indicators */
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .status-success {
+            background: rgba(56, 161, 105, 0.1);
+            color: var(--success-color);
+        }
+        
+        .status-error {
+            background: rgba(229, 62, 62, 0.1);
+            color: var(--error-color);
+        }
+        
+        /* Coordinates Display */
+        .coordinates-display {
+            background: var(--light-color);
+            padding: 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            text-align: center;
+            margin-top: 10px;
+            border: 1px solid var(--border-color);
+        }
+        
+        /* Page Sections */
+        .page-section {
+            display: none;
+        }
+        
+        .page-section.active {
+            display: block;
+        }
+        
+        /* Profile Styles */
+        .profile-avatar-large {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-color), #63b3ed);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 0 auto 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        
+        /* Statistics Styles */
+        .chart-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .chart-placeholder {
+            height: 300px;
+            background: linear-gradient(135deg, #f7fafc, #edf2f7);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #718096;
+            font-size: 1.1rem;
+        }
+        
+        /* Settings Styles */
+        .settings-section {
+            margin-bottom: 30px;
+        }
+        
+        .settings-section h3 {
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+        
+        /* Responsive Adjustments */
+        @media (max-width: 1024px) {
+            .app-container {
+                grid-template-columns: 1fr;
+                grid-template-areas: 
+                    "header"
+                    "main";
+            }
+            
+            .sidebar {
+                display: none;
+            }
+        }
+        
+        /* Print Styles */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">📍</div>
+                <div class="logo-text">
+                    <div class="logo-main">CENTRO DE MONITOREO ROATÁN</div>
+                    <div class="logo-sub">Sistema de Práctica para Operadores 1101</div>
+                </div>
+            </div>
+            <div class="header-controls">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">O</div>
+                    <div>
+                        <div id="userName">Operador</div>
+                        <div style="font-size: 0.8rem; opacity: 0.8;" id="userBadge">CMRO-001</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <aside class="sidebar">
+            <div class="nav-section">
+                <div class="nav-title">Navegación Principal</div>
+                <div class="nav-item active" data-page="dashboard">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard Principal</span>
+                </div>
+                <div class="nav-item" data-page="practice">
+                    <i class="fas fa-map-marked-alt"></i>
+                    <span>Práctica de Ubicaciones</span>
+                </div>
+                <div class="nav-item" data-page="statistics">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Estadísticas</span>
+                </div>
+                <div class="nav-item" data-page="history">
+                    <i class="fas fa-history"></i>
+                    <span>Historial</span>
+                </div>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-title">Configuración</div>
+                <div class="nav-item" data-page="profile">
+                    <i class="fas fa-user-cog"></i>
+                    <span>Perfil de Operador</span>
+                </div>
+                <div class="nav-item" data-page="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Configuración del Sistema</span>
+                </div>
+                <div class="nav-item">
+                    <i class="fas fa-question-circle"></i>
+                    <span>Ayuda y Soporte</span>
+                </div>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-title">Estado del Sistema</div>
+                <div class="nav-item">
+                    <i class="fas fa-server"></i>
+                    <span>Sistema: <span style="color: #68d391;">Operativo</span></span>
+                </div>
+                <div class="nav-item">
+                    <i class="fas fa-database"></i>
+                    <span>Base de Datos: <span style="color: #68d391;">Conectada</span></span>
+                </div>
+                <div class="nav-item">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Seguridad: <span style="color: #68d391;">Activa</span></span>
+                </div>
+            </div>
+        </aside>
+        
+        <main class="main-content">
+            <!-- Dashboard Section -->
+            <div class="page-section active" id="dashboard-section">
+                <div class="content-header">
+                    <h1 class="page-title">
+                        <i class="fas fa-home"></i>
+                        Dashboard Principal
+                    </h1>
+                    <div class="timer-container" id="exerciseTimer">
+                        <i class="fas fa-clock"></i>
+                        <span>Tiempo de Respuesta: <strong>0s</strong></span>
+                    </div>
+                </div>
+                
+                <div class="panel-grid">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">
+                                <i class="fas fa-user"></i>
+                                Información del Operador
+                            </h2>
+                        </div>
+                        <div class="panel-body">
+                            <div class="form-group">
+                                <label class="form-label">Nombre Completo</label>
+                                <input type="text" class="form-control" id="userNameInput" placeholder="Ingrese su nombre completo">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Número de Placa</label>
+                                <input type="text" class="form-control" id="userBadgeInput" placeholder="Ej: CMRO-001">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nivel de Experiencia</label>
+                                <select class="form-control" id="userLevel">
+                                    <option value="beginner">Operador Novel</option>
+                                    <option value="intermediate">Operador Intermedio</option>
+                                    <option value="advanced">Operador Avanzado</option>
+                                    <option value="expert">Operador Experto</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary" id="saveUserBtn">
+                                <i class="fas fa-save"></i>
+                                Guardar Información
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">
+                                <i class="fas fa-chart-line"></i>
+                                Estadísticas de Desempeño
+                            </h2>
+                        </div>
+                        <div class="panel-body">
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-value" id="totalExercises">0</div>
+                                    <div class="stat-label">Llamadas Atendidas</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="correctAnswers">0%</div>
+                                    <div class="stat-label">Tasa de Precisión</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value" id="avgTime">0s</div>
+                                    <div class="stat-label">Tiempo Promedio</div>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group" style="margin-top: 20px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                    <span>Progreso de Entrenamiento</span>
+                                    <span id="progressPercentage">0%</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+                                </div>
+                            </div>
+                            
+                            <div style="display: flex; align-items: center; gap: 10px; margin-top: 15px;">
+                                <span>Nivel de Desempeño:</span>
+                                <div style="display: flex; gap: 3px;">
+                                    <span class="rating-star" style="color: #f1c40f;">★</span>
+                                    <span class="rating-star" style="color: #f1c40f;">★</span>
+                                    <span class="rating-star" style="color: #f1c40f;">★</span>
+                                    <span class="rating-star" style="color: #ddd;">★</span>
+                                    <span class="rating-star" style="color: #ddd;">★</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="panel emergency-panel">
+                    <div class="panel-header emergency-header">
+                        <h2 class="panel-title">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Simulación de Llamada de Emergencia
+                        </h2>
+                    </div>
+                    <div class="panel-body">
+                        <div class="caller-info">
+                            <h3><i class="fas fa-user-injured"></i> Información del Reporte</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Nombre del Reportante</label>
+                                    <input type="text" class="form-control" id="callerName" placeholder="Nombre de quien reporta">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Tipo de Emergencia</label>
+                                    <select class="form-control" id="emergencyType">
+                                        <option value="medical">Emergencia Médica</option>
+                                        <option value="fire">Incendio</option>
+                                        <option value="police">Situación Policial</option>
+                                        <option value="accident">Accidente</option>
+                                        <option value="other">Otro Tipo</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Descripción de la Emergencia</label>
+                                <textarea class="form-control" id="emergencyDescription" rows="2" placeholder="Describa brevemente la emergencia..."></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Ubicación Reportada por el Ciudadano</label>
+                            <div style="background: #f7fafc; padding: 15px; border-radius: 8px; border-left: 4px solid var(--accent-color); font-weight: 600;">
+                                <span id="targetAddress">Dirección reportada verbalmente por el ciudadano (ver descripción)</span>
+                                <span class="status-indicator status-success" style="margin-left: 10px;">ROATÁN</span>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Dirección Exacta (Protocolo 911)</label>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" class="form-control" id="addressInput" placeholder="Ingrese la dirección completa según protocolo...">
+                                <button class="btn btn-warning" id="clearAddressBtn">
+                                    <i class="fas fa-eraser"></i>
+                                    Limpiar
+                                </button>
+                            </div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;" id="addressSuggestions">
+                                <!-- Sugerencias se cargarán aquí -->
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Ubicación en Mapa de Roatán</label>
+                            <div id="map"></div>
+                            <div class="map-controls">
+                                <button class="btn btn-primary" id="zoomInBtn">
+                                    <i class="fas fa-search-plus"></i>
+                                    Acercar
+                                </button>
+                                <button class="btn btn-primary" id="zoomOutBtn">
+                                    <i class="fas fa-search-minus"></i>
+                                    Alejar
+                                </button>
+                                <button class="btn btn-primary" id="centerMapBtn">
+                                    <i class="fas fa-crosshairs"></i>
+                                    Centrar en Roatán
+                                </button>
+                            </div>
+                            <div class="coordinates-display">
+                                Coordenadas: <span id="coordinatesDisplay">16.3243, -86.5272</span>
+                            </div>
+                        </div>
+                        
+                        <div class="feedback" id="feedbackMessage">
+                            <!-- Mensajes de retroalimentación aparecerán aquí -->
+                        </div>
+                        
+                        <div class="action-bar">
+                            <button class="btn btn-success" id="checkAddressBtn">
+                                <i class="fas fa-check-circle"></i>
+                                Verificar Ubicación
+                            </button>
+                            <button class="btn btn-warning" id="nextExerciseBtn">
+                                <i class="fas fa-forward"></i>
+                                Siguiente Llamada
+                            </button>
+                            <button class="btn btn-danger no-print" id="printReportBtn">
+                                <i class="fas fa-print"></i>
+                                Imprimir Reporte
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="panel" style="margin-top: 25px;">
+                    <div class="panel-header">
+                        <h2 class="panel-title">
+                            <i class="fas fa-history"></i>
+                            Historial Reciente de Llamadas
+                        </h2>
+                    </div>
+                    <div class="panel-body">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Hora</th>
+                                        <th>Ubicación</th>
+                                        <th>Precisión</th>
+                                        <th>Tiempo</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyTableBody">
+                                    <!-- Datos del historial se cargarán aquí -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Practice Section -->
+            <div class="page-section" id="practice-section">
+                <div class="content-header">
+                    <h1 class="page-title">
+                        <i class="fas fa-map-marked-alt"></i>
+                        Práctica de Ubicaciones
+                    </h1>
+                </div>
+                
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">
+                            <i class="fas fa-crosshairs"></i>
+                            Modo Práctica Intensiva
+                        </h2>
+                    </div>
+                    <div class="panel-body">
+                        <div class="form-group">
+                            <label class="form-label">Seleccione el tipo de práctica:</label>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                                <button class="btn btn-primary">
+                                    <i class="fas fa-bullseye"></i>
+                                    Práctica de Precisión
+                                </button>
+                                <button class="btn btn-success">
+                                    <i class="fas fa-stopwatch"></i>
+                                    Práctica de Velocidad
+                                </button>
+                                <button class="btn btn-warning">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    Ubicación por Coordenadas
+                                </button>
+                                <button class="btn btn-danger">
+                                    <i class="fas fa-phone-alt"></i>
+                                    Simulación 911 Completa
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Configuración de Dificultad:</label>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Nivel de Dificultad</label>
+                                    <select class="form-control">
+                                        <option>Básico (Calles principales)</option>
+                                        <option>Intermedio (Calles secundarias)</option>
+                                        <option>Avanzado (Puntos específicos)</option>
+                                        <option>Experto (Ubicaciones complejas)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Zona de Práctica</label>
+                                    <select class="form-control">
+                                        <option>Toda Roatán</option>
+                                        <option>Coxen Hole y alrededores</option>
+                                        <option>West End - West Bay</option>
+                                        <option>French Harbour</option>
+                                        <option>Oak Ridge</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="action-bar">
+                            <button class="btn btn-primary">
+                                <i class="fas fa-play"></i>
+                                Iniciar Práctica
+                            </button>
+                            <button class="btn btn-success">
+                                <i class="fas fa-sync-alt"></i>
+                                Práctica Aleatoria
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Statistics Section -->
+            <div class="page-section" id="statistics-section">
+                <div class="content-header">
+                    <h1 class="page-title">
+                        <i class="fas fa-chart-line"></i>
+                        Estadísticas de Desempeño
+                    </h1>
+                </div>
+                
+                <div class="panel-grid">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">
+                                <i class="fas fa-chart-bar"></i>
+                                Resumen de Métricas
+                            </h2>
+                        </div>
+                        <div class="panel-body">
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-value">24</div>
+                                    <div class="stat-label">Sesiones Completadas</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value">87%</div>
+                                    <div class="stat-label">Precisión General</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value">34s</div>
+                                    <div class="stat-label">Tiempo Promedio</div>
+                                </div>
+                            </div>
+                            
+                            <div class="chart-container">
+                                <h3 style="margin-bottom: 15px;">Progreso Semanal</h3>
+                                <div class="chart-placeholder">
+                                    Gráfico de Progreso Semanal
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">
+                                <i class="fas fa-trophy"></i>
+                                Logros y Progreso
+                            </h2>
+                        </div>
+                        <div class="panel-body">
+                            <div style="display: flex; flex-direction: column; gap: 15px;">
+                                <div style="display: flex; align-items: center; gap: 15px; padding: 10px; background: #f7fafc; border-radius: 8px;">
+                                    <div style="width: 40px; height: 40px; background: #f1c40f; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fas fa-medal" style="color: white;"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 600;">Precisión Maestra</div>
+                                        <div style="font-size: 0.85rem; color: #718096;">Logrado: 15/04/2024</div>
+                                    </div>
+                                </div>
+                                
+                                <div style="display: flex; align-items: center; gap: 15px; padding: 10px; background: #f7fafc; border-radius: 8px;">
+                                    <div style="width: 40px; height: 40px; background: #bdc3c7; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fas fa-bolt" style="color: white;"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 600;">Velocidad Relámpago</div>
+                                        <div style="font-size: 0.85rem; color: #718096;">En progreso (80%)</div>
+                                    </div>
+                                </div>
+                                
+                                <div style="display: flex; align-items: center; gap: 15px; padding: 10px; background: #f7fafc; border-radius: 8px;">
+                                    <div style="width: 40px; height: 40px; background: #bdc3c7; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fas fa-map" style="color: white;"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 600;">Conocedor de Roatán</div>
+                                        <div style="font-size: 0.85rem; color: #718096;">En progreso (65%)</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="panel" style="margin-top: 25px;">
+                    <div class="panel-header">
+                        <h2 class="panel-title">
+                            <i class="fas fa-chart-pie"></i>
+                            Análisis Detallado
+                        </h2>
+                    </div>
+                    <div class="panel-body">
+                        <div class="chart-container">
+                            <h3 style="margin-bottom: 15px;">Distribución por Tipo de Emergencia</h3>
+                            <div class="chart-placeholder">
+                                Gráfico de Distribución
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- History Section -->
+            <div class="page-section" id="history-section">
+                <div class="content-header">
+                    <h1 class="page-title">
+                        <i class="fas fa-history"></i>
+                        Historial Completo
+                    </h1>
+                </div>
+                
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">
+                            <i class="fas fa-list"></i>
+                            Registro de Sesiones
+                        </h2>
+                    </div>
+                    <div class="panel-body">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Duración</th>
+                                        <th>Ejercicios</th>
+                                        <th>Precisión</th>
+                                        <th>Puntuación</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>15/04/2024 14:30</td>
+                                        <td>45 min</td>
+                                        <td>24</td>
+                                        <td>92%</td>
+                                        <td>★★★★☆</td>
+                                        <td>
+                                            <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.8rem;">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>14/04/2024 10:15</td>
+                                        <td>32 min</td>
+                                        <td>18</td>
+                                        <td>85%</td>
+                                        <td>★★★☆☆</td>
+                                        <td>
+                                            <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.8rem;">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>13/04/2024 16:45</td>
+                                        <td>58 min</td>
+                                        <td>30</td>
+                                        <td>88%</td>
+                                        <td>★★★★☆</td>
+                                        <td>
+                                            <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.8rem;">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Profile Section -->
+            <div class="page-section" id="profile-section">
+                <div class="content-header">
+                    <h1 class="page-title">
+                        <i class="fas fa-user-cog"></i>
+                        Perfil de Operador
+                    </h1>
+                </div>
+                
+                <div class="panel-grid">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">
+                                <i class="fas fa-id-card"></i>
+                                Información Personal
+                            </h2>
+                        </div>
+                        <div class="panel-body">
+                            <div class="profile-avatar-large" id="profileAvatar">O</div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Nombre Completo</label>
+                                <input type="text" class="form-control" value="Juan Carlos Rodríguez" readonly>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Número de Placa</label>
+                                    <input type="text" class="form-control" value="CMRO-015" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Rango</label>
+                                    <input type="text" class="form-control" value="Operador Senior" readonly>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Correo Electrónico</label>
+                                <input type="email" class="form-control" value="jc.rodriguez@cmroatan.hn">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Teléfono de Contacto</label>
+                                <input type="tel" class="form-control" value="+504 1234-5678">
+                            </div>
+                            
+                            <button class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                Actualizar Información
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h2 class="panel-title">
+                                <i class="fas fa-chart-line"></i>
+                                Estadísticas Personales
+                            </h2>
+                        </div>
+                        <div class="panel-body">
+                            <div class="stats-grid">
+                                <div class="stat-card">
+                                    <div class="stat-value">156</div>
+                                    <div class="stat-label">Horas de Práctica</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-value">89%</div>
+                                    <div class="stat-label">Precisión General</div>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 20px;">
+                                <h3 style="margin-bottom: 15px;">Especialidades</h3>
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <div>
+                                        <div style="display: flex; justify-content: between; margin-bottom: 5px;">
+                                            <span>Ubicación por Calles</span>
+                                            <span>94%</span>
+                                        </div>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: 94%;"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <div style="display: flex; justify-content: between; margin-bottom: 5px;">
+                                            <span>Coordenadas GPS</span>
+                                            <span>87%</span>
+                                        </div>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: 87%;"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <div style="display: flex; justify-content: between; margin-bottom: 5px;">
+                                            <span>Puntos de Referencia</span>
+                                            <span>91%</span>
+                                        </div>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width: 91%;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Settings Section -->
+            <div class="page-section" id="settings-section">
+                <div class="content-header">
+                    <h1 class="page-title">
+                        <i class="fas fa-cog"></i>
+                        Configuración del Sistema
+                    </h1>
+                </div>
+                
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">
+                            <i class="fas fa-sliders-h"></i>
+                            Preferencias de Entrenamiento
+                        </h2>
+                    </div>
+                    <div class="panel-body">
+                        <div class="settings-section">
+                            <h3>Dificultad y Niveles</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Nivel de Dificultad Predeterminado</label>
+                                    <select class="form-control">
+                                        <option>Principiante</option>
+                                        <option>Intermedio</option>
+                                        <option>Avanzado</option>
+                                        <option>Experto</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Límite de Tiempo por Ejercicio</label>
+                                    <select class="form-control">
+                                        <option>Sin límite</option>
+                                        <option>2 minutos</option>
+                                        <option>1 minuto</option>
+                                        <option>30 segundos</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-section">
+                            <h3>Preferencias de Visualización</h3>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Tema de Interfaz</label>
+                                    <select class="form-control">
+                                        <option>Claro</option>
+                                        <option>Oscuro</option>
+                                        <option>Automático</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Tamaño de Fuente</label>
+                                    <select class="form-control">
+                                        <option>Pequeño</option>
+                                        <option>Mediano</option>
+                                        <option>Grande</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-section">
+                            <h3>Configuración de Notificaciones</h3>
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <label style="display: flex; align-items: center; gap: 10px;">
+                                    <input type="checkbox" checked>
+                                    <span>Notificaciones de progreso</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 10px;">
+                                    <input type="checkbox" checked>
+                                    <span>Recordatorios de práctica</span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 10px;">
+                                    <input type="checkbox">
+                                    <span>Notificaciones por correo</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="action-bar">
+                            <button class="btn btn-primary">
+                                <i class="fas fa-save"></i>
+                                Guardar Configuración
+                            </button>
+                            <button class="btn btn-warning">
+                                <i class="fas fa-undo"></i>
+                                Restablecer Valores
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Variables globales
+        let map, marker, userData, currentExercise, timerInterval, startTime;
+        let exercisesCompleted = 0;
+        let correctAnswers = 0;
+        let totalTime = 0;
+        let currentCoordinates = { lat: 16.3243, lng: -86.5272 };
+        
+        // Datos reales de Roatán, Islas de la Bahía, Honduras
+        const streetNames = [
+            "Calle Principal", "Bulevar de los Turistas", "Avenida de los Cocoteros", 
+            "Carrera de la Playa", "Calle del Centro", "Avenida del Mar",
+            "Calle de los Pescadores", "Bulevar del Caribe", "Avenida de las Palmeras",
+            "Calle del Muelle", "Carretera a West End", "Calle Sandy Bay",
+            "Avenida de los Delfines", "Calle Half Moon Bay", "Carretera Principal",
+            "Calle Coxen Hole", "Avenida French Harbour", "Calle West Bay",
+            "Bulevar de los Maestros", "Carrera Oak Ridge"
+        ];
+        
+        const locations = [
+            "Coxen Hole", "French Harbour", "West End", "West Bay", "Sandy Bay", 
+            "Oak Ridge", "Punta Gorda", "Jonesville", "Flowers Bay", "Mahogany Bay",
+            "Politilly Bight", "Camp Bay", "Mount Pleasant", "Gibson Bight", "Mud Hole"
+        ];
+        
+        const pointsOfInterest = [
+            "Parque Central de Coxen Hole", "Muelle de West Bay", "Aeropuerto Internacional de Roatán",
+            "Centro Médico Roatán", "Escuela de Sandy Bay", "Supermercado Eldon's",
+            "Playa West Bay", "Resort Infinity Bay", "Banco BAC", "Iglesia Bautista",
+            "Restaurante Celeste's", "Coco Bango Bar", "Anthony's Key Resort", 
+            "Museo de Roatán", "Parque de los Delfines", "Hospital Roatán",
+            "Estación de Policía Coxen Hole", "Cuartel de Bomberos", "Mercado Municipal",
+            "Puerto de Cruceros", "Plaza Mar"
+        ];
+        
+        const emergencyTypes = {
+            medical: "Emergencia Médica",
+            fire: "Incendio",
+            police: "Situación Policial", 
+            accident: "Accidente",
+            other: "Otro Tipo de Emergencia"
+        };
+
+        // Inicialización cuando se carga la página
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeMap();
+            loadUserData();
+            setupEventListeners();
+            setupNavigation();
+            startNewExercise();
+        });
+        
+        // Configurar navegación entre páginas
+        function setupNavigation() {
+            const navItems = document.querySelectorAll('.nav-item[data-page]');
+            
+            navItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const pageId = this.getAttribute('data-page');
+                    
+                    // Remover clase active de todos los items
+                    navItems.forEach(navItem => {
+                        navItem.classList.remove('active');
+                    });
+                    
+                    // Agregar clase active al item clickeado
+                    this.classList.add('active');
+                    
+                    // Ocultar todas las secciones
+                    document.querySelectorAll('.page-section').forEach(section => {
+                        section.classList.remove('active');
+                    });
+                    
+                    // Mostrar la sección correspondiente
+                    const targetSection = document.getElementById(`${pageId}-section`);
+                    if (targetSection) {
+                        targetSection.classList.add('active');
+                    }
+                });
+            });
+        }
+        
+        // Inicializar el mapa de Leaflet centrado en Roatán
+        function initializeMap() {
+            // Crear el mapa centrado en Roatán, Honduras
+            map = L.map('map').setView([16.3243, -86.5272], 12);
+            
+            // Añadir capa de OpenStreetMap
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            
+            // Establecer límites del mapa para Roatán
+            const bounds = L.latLngBounds(
+                L.latLng(16.15, -86.7),  // Suroeste
+                L.latLng(16.45, -86.3)   // Noreste
+            );
+            map.setMaxBounds(bounds);
+            map.on('drag', function() {
+                map.panInsideBounds(bounds, { animate: false });
+            });
+            
+            // Añadir marcador inicial
+            marker = L.marker([16.3243, -86.5272], {draggable: true}).addTo(map);
+            
+            // Actualizar campo de dirección cuando se mueve el marcador
+            marker.on('dragend', function() {
+                updateAddressFromMarker();
+            });
+            
+            // Permitir hacer clic en el mapa para colocar el marcador
+            map.on('click', function(e) {
+                marker.setLatLng(e.latlng);
+                updateAddressFromMarker();
+            });
+            
+            // Actualizar coordenadas en tiempo real
+            map.on('mousemove', function(e) {
+                currentCoordinates = e.latlng;
+                document.getElementById('coordinatesDisplay').textContent = 
+                    `${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
+            });
+        }
+        
+        // Cargar datos del usuario desde localStorage
+        function loadUserData() {
+            userData = JSON.parse(localStorage.getItem('addressPracticeUser')) || {
+                name: '',
+                level: 'beginner',
+                badge: '',
+                exercisesCompleted: 0,
+                correctAnswers: 0,
+                totalTime: 0,
+                history: []
+            };
+            
+            exercisesCompleted = userData.exercisesCompleted || 0;
+            correctAnswers = userData.correctAnswers || 0;
+            totalTime = userData.totalTime || 0;
+            
+            // Actualizar la interfaz con los datos del usuario
+            document.getElementById('userNameInput').value = userData.name;
+            document.getElementById('userBadgeInput').value = userData.badge;
+            document.getElementById('userLevel').value = userData.level;
+            document.getElementById('userName').textContent = userData.name || 'Operador';
+            document.getElementById('userBadge').textContent = userData.badge || 'CMRO-001';
+            document.getElementById('userAvatar').textContent = userData.name ? userData.name.charAt(0).toUpperCase() : 'O';
+            document.getElementById('profileAvatar').textContent = userData.name ? userData.name.charAt(0).toUpperCase() : 'O';
+            
+            // Actualizar estadísticas
+            updateStats();
+        }
+        
+        // Configurar event listeners
+        function setupEventListeners() {
+            // Guardar información del usuario
+            document.getElementById('saveUserBtn').addEventListener('click', saveUserData);
+            
+            // Verificar dirección
+            document.getElementById('checkAddressBtn').addEventListener('click', checkAddress);
+            
+            // Siguiente ejercicio
+            document.getElementById('nextExerciseBtn').addEventListener('click', startNewExercise);
+            
+            // Limpiar dirección
+            document.getElementById('clearAddressBtn').addEventListener('click', function() {
+                document.getElementById('addressInput').value = '';
+            });
+            
+            // Autocompletado de dirección
+            document.getElementById('addressInput').addEventListener('input', function() {
+                showAddressSuggestions(this.value);
+            });
+            
+            // Controles del mapa
+            document.getElementById('zoomInBtn').addEventListener('click', function() {
+                map.zoomIn();
+            });
+            
+            document.getElementById('zoomOutBtn').addEventListener('click', function() {
+                map.zoomOut();
+            });
+            
+            document.getElementById('centerMapBtn').addEventListener('click', function() {
+                map.setView([16.3243, -86.5272], 12);
+            });
+            
+            // Imprimir reporte
+            document.getElementById('printReportBtn').addEventListener('click', function() {
+                window.print();
+            });
+        }
+        
+        // Guardar datos del usuario
+        function saveUserData() {
+            const name = document.getElementById('userNameInput').value;
+            const badge = document.getElementById('userBadgeInput').value;
+            const level = document.getElementById('userLevel').value;
+            
+            if (!name.trim()) {
+                showFeedback('Por favor ingresa tu nombre completo', 'error');
+                return;
+            }
+            
+            userData.name = name;
+            userData.badge = badge;
+            userData.level = level;
+            
+            localStorage.setItem('addressPracticeUser', JSON.stringify(userData));
+            
+            document.getElementById('userName').textContent = name;
+            document.getElementById('userBadge').textContent = badge;
+            document.getElementById('userAvatar').textContent = name.charAt(0).toUpperCase();
+            document.getElementById('profileAvatar').textContent = name.charAt(0).toUpperCase();
+            
+            showFeedback('Información del operador guardada correctamente', 'success');
+        }
+        
+        // Iniciar un nuevo ejercicio
+        function startNewExercise() {
+            // Reiniciar temporizador
+            clearInterval(timerInterval);
+            startTime = new Date();
+            timerInterval = setInterval(updateTimer, 1000);
+            
+            // Generar dirección aleatoria de Roatán
+            currentExercise = generateRandomAddress();
+            document.getElementById('targetAddress').textContent = "Dirección reportada verbalmente por el ciudadano (ver descripción)";
+            
+            // Generar datos aleatorios para la simulación
+            document.getElementById('callerName').value = generateRandomName();
+            document.getElementById('emergencyType').value = getRandomEmergencyType();
+            const desc = generateEmergencyDescription();
+            const addressInfo = `. El reportante proporciona la siguiente dirección: ${currentExercise.fullAddress}`;
+            document.getElementById('emergencyDescription').value = desc + addressInfo;
+            
+            // Limpiar campos
+            document.getElementById('addressInput').value = '';
+            document.getElementById('feedbackMessage').className = 'feedback';
+            document.getElementById('feedbackMessage').textContent = '';
+            
+            // Centrar mapa en centro de Roatán (no en ubicación aleatoria)
+            map.setView([16.3243, -86.5272], 12);
+            marker.setLatLng([16.3243, -86.5272]);
+            
+            // Generar sugerencias
+            showAddressSuggestions('');
+        }
+        
+        // Generar dirección aleatoria de Roatán
+        function generateRandomAddress() {
+            const street = streetNames[Math.floor(Math.random() * streetNames.length)];
+            const number = Math.floor(Math.random() * 200) + 1;
+            const location = locations[Math.floor(Math.random() * locations.length)];
+            const poi = pointsOfInterest[Math.floor(Math.random() * pointsOfInterest.length)];
+            
+            // Alternar entre direcciones regulares y puntos de interés
+            const usePOI = Math.random() > 0.5;
+            
+            if (usePOI) {
+                return {
+                    type: 'poi',
+                    name: poi,
+                    location: location,
+                    fullAddress: `${poi}, ${location}, Roatán, Islas de la Bahía, Honduras`
+                };
+            } else {
+                return {
+                    type: 'street',
+                    street: street,
+                    number: number,
+                    location: location,
+                    fullAddress: `${street} ${number}, ${location}, Roatán, Islas de la Bahía, Honduras`
+                };
+            }
+        }
+        
+        // Generar nombre aleatorio para el reportante
+        function generateRandomName() {
+            const firstNames = ["Juan", "María", "Carlos", "Ana", "José", "Laura", "Miguel", "Elena", "Roberto", "Carmen"];
+            const lastNames = ["Hernández", "García", "López", "Martínez", "Pérez", "Rodríguez", "González", "Sánchez", "Ramírez", "Flores"];
+            
+            return `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
+        }
+        
+        // Obtener tipo de emergencia aleatorio
+        function getRandomEmergencyType() {
+            const types = Object.keys(emergencyTypes);
+            return types[Math.floor(Math.random() * types.length)];
+        }
+        
+        // Generar descripción de emergencia aleatoria
+        function generateEmergencyDescription() {
+            const descriptions = [
+                "Persona inconsciente en la vía pública",
+                "Fuego en estructura residencial",
+                "Accidente vehicular con heridos",
+                "Robo en progreso",
+                "Persona con dificultad para respirar",
+                "Pérdida de conocimiento repentina",
+                "Choque entre dos vehículos",
+                "Incendio forestal",
+                "Asalto a mano armada",
+                "Caída desde altura"
+            ];
+            
+            return descriptions[Math.floor(Math.random() * descriptions.length)];
+        }
+        
+        // Mostrar sugerencias de dirección
+        function showAddressSuggestions(input) {
+            const suggestionsContainer = document.getElementById('addressSuggestions');
+            suggestionsContainer.innerHTML = '';
+            
+            // Si no hay entrada, mostrar sugerencias generales
+            if (!input) {
+                const allSuggestions = [...streetNames.slice(0, 4), ...pointsOfInterest.slice(0, 3)];
+                
+                allSuggestions.forEach(suggestion => {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn btn-primary';
+                    btn.style.padding = '6px 12px';
+                    btn.style.fontSize = '0.85rem';
+                    btn.textContent = suggestion;
+                    btn.addEventListener('click', function() {
+                        document.getElementById('addressInput').value = suggestion;
+                    });
+                    suggestionsContainer.appendChild(btn);
+                });
+                return;
+            }
+            
+            // Filtrar sugerencias basadas en la entrada
+            const allOptions = [...streetNames, ...pointsOfInterest, ...locations];
+            const filteredOptions = allOptions.filter(option => 
+                option.toLowerCase().includes(input.toLowerCase())
+            );
+            
+            filteredOptions.slice(0, 6).forEach(option => {
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-primary';
+                btn.style.padding = '6px 12px';
+                btn.style.fontSize = '0.85rem';
+                btn.textContent = option;
+                btn.addEventListener('click', function() {
+                    document.getElementById('addressInput').value = option;
+                });
+                suggestionsContainer.appendChild(btn);
+            });
+        }
+        
+        // Actualizar dirección desde el marcador
+        function updateAddressFromMarker() {
+            // En una implementación real, aquí se usaría un servicio de geocodificación inversa
+            // Por ahora, simplemente actualizamos con coordenadas
+            const latLng = marker.getLatLng();
+            document.getElementById('addressInput').value = `Coordenadas: ${latLng.lat.toFixed(4)}, ${latLng.lng.toFixed(4)}`;
+        }
+        
+        // Verificar la dirección ingresada
+        function checkAddress() {
+            clearInterval(timerInterval);
+            const endTime = new Date();
+            const timeTaken = Math.round((endTime - startTime) / 1000);
+            
+            const userAddress = document.getElementById('addressInput').value;
+            const feedback = document.getElementById('feedbackMessage');
+            
+            if (!userAddress.trim()) {
+                showFeedback('Por favor ingresa una dirección antes de verificar', 'error');
+                return;
+            }
+            
+            // Calcular precisión basada en la similitud con la dirección objetivo
+            let accuracy = calculateAccuracy(userAddress, currentExercise);
+            
+            // Considerar correcto si la precisión es mayor al 80%
+            const isCorrect = accuracy >= 80;
+            
+            // Actualizar estadísticas
+            exercisesCompleted++;
+            if (isCorrect) correctAnswers++;
+            totalTime += timeTaken;
+            
+            // Actualizar datos del usuario
+            userData.exercisesCompleted = exercisesCompleted;
+            userData.correctAnswers = correctAnswers;
+            userData.totalTime = totalTime;
+            userData.history.unshift({
+                date: new Date().toLocaleString('es-HN'),
+                address: currentExercise.fullAddress,
+                userInput: userAddress,
+                correct: isCorrect,
+                time: timeTaken,
+                accuracy: accuracy
+            });
+            
+            // Limitar el historial a 10 entradas
+            if (userData.history.length > 10) {
+                userData.history = userData.history.slice(0, 10);
+            }
+            
+            localStorage.setItem('addressPracticeUser', JSON.stringify(userData));
+            
+            // Mostrar retroalimentación
+            if (isCorrect) {
+                showFeedback(`¡Ubicación correcta! Precisión: ${accuracy}%. Tiempo de respuesta: ${timeTaken} segundos.`, 'success');
+            } else {
+                showFeedback(`Ubicación incorrecta. Precisión: ${accuracy}%. La dirección correcta era: ${currentExercise.fullAddress}`, 'error');
+            }
+            
+            // Actualizar estadísticas en la interfaz
+            updateStats();
+        }
+        
+        // Calcular precisión de la dirección ingresada
+        function calculateAccuracy(userAddress, targetExercise) {
+            let score = 0;
+            const userAddressLower = userAddress.toLowerCase();
+            const targetAddressLower = targetExercise.fullAddress.toLowerCase();
+            
+            // Verificar coincidencia de palabras clave
+            if (targetExercise.type === 'street') {
+                if (userAddressLower.includes(targetExercise.street.toLowerCase())) score += 40;
+                if (userAddressLower.includes(targetExercise.location.toLowerCase())) score += 30;
+                if (userAddressLower.includes(targetExercise.number.toString())) score += 20;
+                if (userAddressLower.includes("islas de la bahía") || userAddressLower.includes("roatan")) score += 10;
+            } else {
+                if (userAddressLower.includes(targetExercise.name.toLowerCase())) score += 50;
+                if (userAddressLower.includes(targetExercise.location.toLowerCase())) score += 30;
+                if (userAddressLower.includes("islas de la bahía") || userAddressLower.includes("roatan")) score += 20;
+            }
+            
+            return Math.min(score, 100);
+        }
+        
+        // Mostrar mensaje de retroalimentación
+        function showFeedback(message, type) {
+            const feedback = document.getElementById('feedbackMessage');
+            feedback.className = `feedback ${type}`;
+            feedback.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${message}`;
+        }
+        
+        // Actualizar el temporizador
+        function updateTimer() {
+            const currentTime = new Date();
+            const elapsed = Math.round((currentTime - startTime) / 1000);
+            const timerElement = document.getElementById('exerciseTimer');
+            
+            timerElement.innerHTML = `<i class="fas fa-clock"></i><span>Tiempo de Respuesta: <strong>${elapsed}s</strong></span>`;
+            
+            // Cambiar color según el tiempo transcurrido
+            if (elapsed > 60) {
+                timerElement.className = 'timer-container timer-critical';
+            } else if (elapsed > 30) {
+                timerElement.className = 'timer-container timer-warning';
+            } else {
+                timerElement.className = 'timer-container';
+            }
+        }
+        
+        // Actualizar estadísticas en la interfaz
+        function updateStats() {
+            document.getElementById('totalExercises').textContent = exercisesCompleted;
+            
+            const accuracy = exercisesCompleted > 0 ? Math.round((correctAnswers / exercisesCompleted) * 100) : 0;
+            document.getElementById('correctAnswers').textContent = `${accuracy}%`;
+            
+            const avgTime = exercisesCompleted > 0 ? Math.round(totalTime / exercisesCompleted) : 0;
+            document.getElementById('avgTime').textContent = `${avgTime}s`;
+            
+            // Actualizar barra de progreso
+            const progress = Math.min(exercisesCompleted * 10, 100);
+            document.getElementById('progressPercentage').textContent = `${progress}%`;
+            document.getElementById('progressFill').style.width = `${progress}%`;
+            
+            // Actualizar historial
+            updateHistoryTable();
+        }
+        
+        // Actualizar la tabla de historial
+        function updateHistoryTable() {
+            const tableBody = document.getElementById('historyTableBody');
+            tableBody.innerHTML = '';
+            
+            userData.history.forEach(entry => {
+                const row = document.createElement('tr');
+                
+                const timeCell = document.createElement('td');
+                timeCell.textContent = entry.date.split(' ')[1]; // Solo la hora
+                
+                const addressCell = document.createElement('td');
+                addressCell.textContent = entry.address.length > 30 ? 
+                    entry.address.substring(0, 30) + '...' : entry.address;
+                addressCell.title = entry.address;
+                
+                const accuracyCell = document.createElement('td');
+                accuracyCell.textContent = `${entry.accuracy}%`;
+                
+                const timeTakenCell = document.createElement('td');
+                timeTakenCell.textContent = `${entry.time}s`;
+                
+                const statusCell = document.createElement('td');
+                const statusIndicator = document.createElement('span');
+                statusIndicator.className = `status-indicator ${entry.correct ? 'status-success' : 'status-error'}`;
+                statusIndicator.textContent = entry.correct ? 'Correcto' : 'Incorrecto';
+                statusCell.appendChild(statusIndicator);
+                
+                row.appendChild(timeCell);
+                row.appendChild(addressCell);
+                row.appendChild(accuracyCell);
+                row.appendChild(timeTakenCell);
+                row.appendChild(statusCell);
+                
+                tableBody.appendChild(row);
+            });
+        }
+    </script>
+</body>
+</html>
